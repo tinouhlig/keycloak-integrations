@@ -1,0 +1,59 @@
+name: "keycloak-integrations"
+
+services:
+    keycloak:
+        image: keycloak/keycloak:26.0.0
+        restart: unless-stopped
+        command: start --import-realm
+        ports:
+            - "8080:8080"
+        environment:
+            KC_PROXY_ADDRESS_FORWARDING: "true"
+            KC_HOSTNAME_STRICT: "false"
+            KC_PROXY: edge
+            KC_HTTP_ENABLED: "true"
+            KC_HOSTNAME: "http://localhost:8080"
+            KC_BOOTSTRAP_ADMIN_USERNAME: admin
+            KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+            JDBC_CONNECTION_PARAMETERS: "?createDatabaseIfNotExist=true"
+            KC_DB: postgres
+            KC_DB_USERNAME: postgres
+            KC_DB_PASSWORD: password
+            KC_DB_URL: jdbc:postgresql://db/keycloak
+
+    php-symfony:
+        build:
+            context: php-symfony
+            dockerfile: docker/Dockerfile
+            target: app_dev
+        ports:
+            - "8081:80" # HTTP
+        volumes:
+            - ./php-symfony:/app
+            - ./php-symfony/var:/app/var
+            - caddy_data:/data
+            - caddy_config:/config
+
+    js-react:
+        image: node:22-alpine
+        working_dir: /app
+        volumes:
+            -   ./js-react:/app
+        ports:
+            -   "3000:3000"
+        command: "npm start"
+
+    db:
+        image: postgres
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: password
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:
