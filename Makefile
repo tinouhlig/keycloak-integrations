@@ -48,8 +48,13 @@ logs-%: ## Builds the service given as last part from the make target
 
 $(addprefix attach-, $(APP_SERVICES)): attach-%
 attach-%: ## Builds the service given as last part from the make target
-	$(DOCKER_COMPOSE) exec -u root:root $* bash
+	$(DOCKER_COMPOSE) exec -u root:root $* sh
 .PHONY: attach-%
+
+$(addprefix start-attached-, $(APP_SERVICES)): start-attached-%
+start-attached-%: ## Starts the service given as last part from the make target
+	$(DOCKER_COMPOSE) up $*
+.PHONY: start-attached-%
 
 $(addprefix start-, $(APP_SERVICES)): start-%
 start-%: ## Starts the service given as last part from the make target
