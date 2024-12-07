@@ -1,0 +1,27 @@
+spring:
+    application:
+        name: "spring"
+    datasource:
+        url: "jdbc:postgresql://db:5432/springboot"
+        username: "postgres"
+        password: "password"
+    jpa:
+        hibernate:
+            ddl-auto: "update"
+    security:
+        oauth2:
+            client:
+                registration:
+                    keycloak:
+                        provider: keycloak-provider
+                        client-id: java-spring
+                        client-secret: eheD9nh3nTjsZKexVQlaP1EDQN4sboDH
+                        authorization-grant-type: authorization_code
+                        scope: openid,profile
+                provider:
+                    keycloak-provider:
+                        issuerUri: http://keycloak.docker.localhost/realms/master
+                        authorizationUri: http://keycloak.docker.localhost/realms/master/protocol/openid-connect/auth
+                        tokenUri: http://keycloak.docker.localhost/realms/master/protocol/openid-connect/token
+                        userInfoUri: http://keycloak.docker.localhost/realms/master/protocol/openid-connect/userinfo
+                        jwkSetUri: http://keycloak.docker.localhost/realms/master/protocol/openid-connect/certs

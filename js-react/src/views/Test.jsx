@@ -7,7 +7,7 @@ function Test() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch("http://localhost:8081/test", {
+                const response = await fetch("http://symfony.docker.localhost/test", {
                     headers: {
                         'Authorization': 'Bearer ' + localStorage.getItem('token')
                     }

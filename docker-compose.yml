@@ -1,31 +1,59 @@
 name: "keycloak-integrations"
 
 services:
+    traefik:
+        # The official v3 Traefik docker image
+        image: traefik:v3.2
+        container_name: traefik
+        restart: unless-stopped
+        # Enables the web UI and tells Traefik to listen to docker
+        command: --api.insecure=true --providers.docker --log.level=DEBUG
+        ports:
+            # The HTTP port
+            - "80:80"
+            # The Web UI (enabled by --api.insecure=true)
+            - "8080:8080"
+        volumes:
+            # So that Traefik can listen to the Docker events
+            - /var/run/docker.sock:/var/run/docker.sock
+        labels:
+            - "traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.docker.localhost`)"
+
     keycloak:
-        image: keycloak/keycloak:26.0.0
+        image: keycloak/keycloak:26.0.7
+        container_name: keycloak
         restart: unless-stopped
         command: start --import-realm
+        dns:
+            - "${COREDNS_CONTAINER_IP}"
         ports:
-            - "8080:8080"
+            - "8083:8080" # HTTP
         environment:
             KC_PROXY_ADDRESS_FORWARDING: "true"
             KC_HOSTNAME_STRICT: "false"
             KC_PROXY: edge
             KC_HTTP_ENABLED: "true"
-            KC_HOSTNAME: "http://localhost:8080"
+            KC_HOSTNAME: "http://keycloak.docker.localhost"
             KC_BOOTSTRAP_ADMIN_USERNAME: admin
             KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-            JDBC_CONNECTION_PARAMETERS: "?createDatabaseIfNotExist=true"
             KC_DB: postgres
             KC_DB_USERNAME: postgres
             KC_DB_PASSWORD: password
             KC_DB_URL: jdbc:postgresql://db/keycloak
+        labels:
+            - "traefik.http.routers.keycloak.rule=Host(`keycloak.docker.localhost`)"
+
 
     php-symfony:
+        container_name: symfony
         build:
             context: php-symfony
             dockerfile: docker/Dockerfile
             target: app_dev
+        restart: unless-stopped
+        dns:
+            - "${COREDNS_CONTAINER_IP}"
         ports:
             - "8081:80" # HTTP
         volumes:
@@ -33,8 +61,16 @@ services:
             - ./php-symfony/var:/app/var
             - caddy_data:/data
             - caddy_config:/config
+        labels:
+            - "traefik.http.routers.symfony.rule=Host(`symfony.docker.localhost`)"
 
     java-spring:
+        container_name: spring
+        restart: unless-stopped
+        depends_on:
+            -   dns
+        dns:
+            - "${COREDNS_CONTAINER_IP}"
         build:
             context: java-spring
             dockerfile: docker/Dockerfile
@@ -43,15 +79,22 @@ services:
             - "8082:8080" # HTTP
         volumes:
             - ./java-spring:/app
+        labels:
+            - "traefik.http.routers.spring.rule=Host(`spring.docker.localhost`)"
 
     js-react:
         image: node:22-alpine
+        restart: unless-stopped
         working_dir: /app
+        dns:
+            - "${COREDNS_CONTAINER_IP}"
         volumes:
             -   ./js-react:/app
         ports:
             -   "3000:3000"
         command: "npm start"
+        labels:
+            - "traefik.http.routers.react.rule=Host(`react.docker.localhost`)"
 
     db:
         image: postgres
@@ -62,6 +105,25 @@ services:
             - "5432:5432"
         volumes:
             - pgdata:/var/lib/postgresql/data
+
+    dns:
+        image: coredns/coredns
+        container_name: dns
+        restart: always
+        command: -conf coredns-config/Corefile
+        depends_on:
+            -   traefik
+        volumes:
+            - ./config/dns:/coredns-config/
+        labels:
+            - "traefik.enable=false"
+
+    ubuntu:
+        image: ubuntu
+        container_name: ubuntu
+        restart: always
+        dns:
+            - "${COREDNS_CONTAINER_IP}"
 
 volumes:
   caddy_data:

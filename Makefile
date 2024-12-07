@@ -1,12 +1,45 @@
 MAKEFLAGS += --warn-undefined-variables
 SHELL := bash
 .SHELLFLAGS := -eu -o pipefail -c
+COREDNS_CONTAINER_IP ?= $(shell docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' dns)
+
+OS_TYPE ?= $(shell uname)
+TEST_COMPOSE_CMD := $(shell docker compose version >/dev/null 2>&1 && echo yes || echo no)
+
+
+ifeq ($(OS_TYPE), Darwin)
+LOCAL_DNS_IP ?= $(shell ifconfig $$(route get 8.8.8.8 | grep interface | awk '{ print $$2 }') | grep -E "inet " | awk '{ print $$2 }')
+else
+LOCAL_DNS_IP ?= $(shell ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')
+endif
+
+ifeq ($(TEST_COMPOSE_CMD),yes)
+DOCKER_COMPOSE := docker compose
+else
+DOCKER_COMPOSE := docker-compose
+endif
+
+ECHO := echo
+CP := cp
+EGREP := egrep
+
+-include .env
+-include .env.local
+export
+
+export PUID ?= $(shell id -u)
+export PGID ?= $(shell id -g)
+
 
 DOCKER := docker
 DOCKER_COMPOSE := docker compose
 
 all: help
 .PHONY: all
+
+env:
+	printenv
+.PHONY: env
 
 help:
 	@echo -e "\033[0;32m Usage: make [target] "
@@ -22,18 +55,12 @@ shell: ## Run a shell inside the
 	$(DOCKER_COMPOSE) run --rm app sh
 .PHONY: shell
 
-start-all: ## Start all services
-	$(DOCKER_COMPOSE) up -d
+restart: ## Start all services
+	$(DOCKER_COMPOSE) stop && $(DOCKER_COMPOSE) up -d
 .PHONY: start-all
 
-start-attached: ## Starts the application for local development (attached)  (run make build at least once first!)
-	$(DOCKER_COMPOSE) up --build --remove-orphans php-symfony
-	@echo"The application is available at http://localhost:8081"
-.PHONY: start-attached
-
 start: ## Starts the application for local development (detached)
-	$(DOCKER_COMPOSE) up -d --remove-orphans php-symfony
-	@echo "The application is available at http://localhost:8081"
+	$(DOCKER_COMPOSE) up -d
 .PHONY: start
 
 start-js: ## Starts the application for local development (detached)
@@ -71,3 +98,11 @@ build-%: ## Builds the service given as last part from the make target
 	$(DOCKER_COMPOSE) build --build-arg BUILDKIT_INLINE_CACHE=1 $*
 .PHONY: build-%
 
+clean: ## Stops and removes all docker items related to this service
+	@$(DOCKER_COMPOSE) down -v --remove-orphans
+.PHONY: clean
+
+$(addprefix shell-, $(APP_SERVICES)): shell-%
+shell-%: ## Builds the service given as last part from the make target
+	$(DOCKER_COMPOSE) run --remove-orphans $* bash
+.PHONY: shell-%

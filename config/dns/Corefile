@@ -1,0 +1,11 @@
+.:53 {
+    forward . 8.8.8.8 8.8.4.4
+    log
+    errors
+}
+
+docker.localhost:53 {
+    file /coredns-config/docker.localhost.db
+    log
+    errors
+}

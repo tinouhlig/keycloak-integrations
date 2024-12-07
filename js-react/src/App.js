@@ -7,7 +7,7 @@ import Profile from "./views/Profile";
 import Test from "./views/Test";
 
 const keycloak = new Keycloak({
-  url: "http://localhost:8080",
+  url: "http://keycloak.docker.localhost",
   realm: "master",
   clientId: "js-react"
 });

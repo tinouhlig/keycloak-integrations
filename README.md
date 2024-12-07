@@ -15,7 +15,7 @@ more description will be added soon ...
 - [x] add symfony app
   - [x] add secured route with access token authenticator
   - [ ] obtain an access token and call another backend service
-- [ ] add spring boot app
+- [x] add spring boot app
   - [ ] add secured route
   - [ ] obtain an access token and call another backend service
 - [ ] add go app

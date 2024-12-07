@@ -1,0 +1,14 @@
+$TTL 3600
+@       IN      SOA     ns.docker.localhost. admin.docker.localhost. (
+                        2024120501 ; Serial
+                        3600       ; Refresh
+                        1800       ; Retry
+                        1209600    ; Expire
+                        3600       ; Minimum TTL
+                        )
+
+        IN      NS      ns.docker.localhost.
+
+ns      IN      A       127.0.0.1
+
+*       IN      A       172.20.0.2
